@@ -41,6 +41,16 @@ def init():
     cursor.execute(vectors_create_query)
     unknown_create_query = "CREATE TABLE IF NOT EXISTS unknown_questions(" \
                            "index SERIAL PRIMARY KEY," \
-                           "Вопрос TEXT)"
+                           "Вопрос TEXT," \
+                           "Попытка INT," \
+                           "Тип TEXT," \
+                           "Запрос TEXT," \
+                           "Предположение TEXT)"
     cursor.execute(unknown_create_query)
+    connection.commit()
+
+
+def push_unknown(question, attempt, rtype=None, request=None, suggestion=None):
+    cursor.execute('INSERT INTO unknown_questions("Вопрос", "Попытка", "Тип", "Запрос", "Предположение") '
+                   'VALUES(%s, %s, %s, %s, %s)', (question, attempt, rtype, request, suggestion))
     connection.commit()
