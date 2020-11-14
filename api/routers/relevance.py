@@ -1,9 +1,11 @@
 import numpy as np
-from fastapi import APIRouter
+from fastapi import APIRouter,  HTTPException
 import requests
 from model import answer
+from model import context as ctx
 from utils import db_controller
 from sklearn.metrics.pairwise import cosine_distances
+import redis
 
 
 router = APIRouter()
@@ -54,9 +56,14 @@ def cancel_question():
     # TODO: Удалить из контекста запись
     pass
 
-@router.get("/bot/v1/question/{chat_id}/operator")
-def operator():
-    # TODO: Проверить что контекст есть
+@router.get("/bot/v1/question/{chat_id}/operator", response_model=answer.Answer)
+def operator(chat_id: str):
+    r = redis.Redis(host='hostname', port=port, password='password')
+    if (not r.contains(chat_id)):
+        raise HTTPException(status_code=404, detail="Chat context not found")
+    context = r.get(chat_id)
+    if (context.state != ctx.State.clarification):
+        raise HTTPException(status_code=400, detail="You are not in the clarification state")        
     # TODO: Сформировать ответ с AnswerType.operator
-    # TODO: Удалить из контекста запись
-    pass
+    # TODO: записать context в неизвестные
+    r.remove(chat_id)
