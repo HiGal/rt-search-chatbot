@@ -43,10 +43,12 @@ BAD_ANSWER = "Ответ не подходит"
 NEW_ANSWER = "Новый вопрос"
 CALL_OPERATOR = "Позвать оператора"
 
+OPERATOR_GREETING_STUB = '🙋‍♂️Здравствуйте! Меня зовут Петя. Я оператор\n\nПерезагружать пробовали?'
+
 
 def start(update: Update, context: CallbackContext) -> int:
     update.message.reply_text(
-        'Вас приветствует чат-бот для поиска ответов на ваши вопросы по нашему сервису!\n\n'
+        '🤖Вас приветствует чат-бот для поиска ответов на ваши вопросы по нашему сервису!\n\n'
         'Отправьте интересующий вас вопрос',
         reply_markup=ReplyKeyboardRemove()
     )
@@ -62,7 +64,7 @@ def question(update: Update, context: CallbackContext) -> int:
 
     logger.info("Question of %s: %s", user.first_name, text)
 
-    if text[0] == "\"" and text[-1] == '\"':
+    if text[0] == '\"' and text[-1] == '\"':
         text = text[1:-1]
 
     if text == CALL_OPERATOR:
@@ -71,6 +73,19 @@ def question(update: Update, context: CallbackContext) -> int:
                 "{}/bot/v1/question/{}/operator".format(host_address, user.id)
             )
             response.raise_for_status()
+
+            update.message.reply_text(
+                "🤖Сейчас мы перенаправим вас на свободного оператора для более эффективной помощи.\n"
+                "Пожалуйста, подождите\n\n"
+                "/cancel - отменить",
+                reply_markup=ReplyKeyboardRemove()
+            )
+            update.message.reply_text(
+                OPERATOR_GREETING_STUB,
+                reply_markup=ReplyKeyboardRemove()
+            )
+
+            return OPERATOR
         except HTTPError as http_err:
             logger.exception(f'HTTP error occurred: {http_err}')
         except Exception as err:
@@ -107,25 +122,10 @@ def answer(update: Update, context: CallbackContext) -> int:
     logger.info("Answer of %s: %s", user.first_name, text)
 
     if text == NEW_ANSWER:
-        update.message.reply_text(
-            "Ждем ваш новый вопрос!",
-            reply_markup=ReplyKeyboardRemove()
-        )
-
-        try:
-            response = requests.get(
-                "{}/bot/v1/question/{}/cancel".format(host_address, user.id)
-            )
-            response.raise_for_status()
-        except HTTPError as http_err:
-            logger.exception(f'HTTP error occurred: {http_err}')
-        except Exception as err:
-            logger.exception(f'Other error occurred: {err}')
-
-        return QUESTION
+        return new_question(update, user.id)
     elif text == BAD_ANSWER:
         update.message.reply_text(
-            "У нас есть другой ответ, который возможно вам поможет:",
+            "🤖У нас есть другой ответ, который возможно вам поможет:",
             reply_markup=ReplyKeyboardRemove()
         )
 
@@ -148,7 +148,7 @@ def answer(update: Update, context: CallbackContext) -> int:
         except Exception as err:
             logger.exception(f'Other error occurred: {err}')
 
-        resolve_response(update, answer_data, answer_type, answer_options)
+        return resolve_response(update, answer_data, answer_type, answer_options)
 
     return QUESTION
 
@@ -157,7 +157,7 @@ def cancel(update: Update, context: CallbackContext) -> int:
     user = update.message.from_user
     logger.info("User %s canceled the conversation.", user.first_name)
     update.message.reply_text(
-        'Начнем сначала!\n\n'
+        '🤖Начнем сначала!\n\n'
         'Отправьте интересующий вас вопрос', reply_markup=ReplyKeyboardRemove()
     )
 
@@ -167,17 +167,16 @@ def cancel(update: Update, context: CallbackContext) -> int:
 def operator(update: Update, context: CallbackContext) -> int:
     user = update.message.from_user
     text = update.message.text
-    logger.info("Operator state achieved by %s", user.first_name, text)
+    logger.info("Operator state achieved by %s", user.first_name)
 
     if text.lower() == 'да':
         update.message.reply_text(
-            'Попробуйте 3 раза', reply_markup=ReplyKeyboardRemove()
+            '🙋‍♂️Попробуйте перезагрузить компьютер 3 раза', reply_markup=ReplyKeyboardRemove()
         )
         return OPERATOR
 
     update.message.reply_text(
-        'Здравствуйте! Меня зовут {operator_name}\n\n'
-        'Перезагружать пробовали?', reply_markup=ReplyKeyboardRemove()
+        '🙋‍♂️Перезагрузка не помогла, да?', reply_markup=ReplyKeyboardRemove()
     )
     return OPERATOR
 
@@ -186,31 +185,54 @@ def resolve_response(update: Update, answer_data: str, answer_type: str, answer_
     if answer_type == 'final':
         reply_keyboard = [[NEW_ANSWER, BAD_ANSWER]]
         update.message.reply_text(
-            answer_data,
+            "🤖"+answer_data,
             reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
         )
         return ANSWER
     elif answer_type == 'clarification':
-        reply_keyboard = [['\"' + item + '\"' for item in answer_options], CALL_OPERATOR]
+        reply_keyboard = [['\"' + item + '\"' for item in answer_options], [CALL_OPERATOR]]
         update.message.reply_text(
-            answer_data,
+            "🤖"+answer_data,
             reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
         )
         return QUESTION
     elif answer_type == 'operator':
         update.message.reply_text(
-            "Сейчас мы перенаправим вас на свободного оператора для более эффективной помощи.\n"
-            "Пожалуйста, подождите",
+            "🤖Сейчас мы перенаправим вас на свободного оператора для более эффективной помощи.\n"
+            "Пожалуйста, подождите\n\n"
+            "/cancel - отменить",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        update.message.reply_text(
+            OPERATOR_GREETING_STUB,
             reply_markup=ReplyKeyboardRemove()
         )
         return OPERATOR
     else:
         update.message.reply_text(
-            "Что-то пошло не так, когда бот пытался обратиться к базе знаний...\n"
+            "🤖🤷Что-то пошло не так, когда бот пытался обратиться к базе знаний...\n"
             "Пожалуйста, повторите попытку позднее!",
             reply_markup=ReplyKeyboardRemove()
         )
         return QUESTION
+
+
+def new_question(update: Update, user_id) -> int:
+    update.message.reply_text(
+        "🤖Ждем ваш новый вопрос!",
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+    try:
+        response = requests.get(
+            "{}/bot/v1/question/{}/cancel".format(host_address, user_id)
+        )
+        response.raise_for_status()
+    except HTTPError as http_err:
+        logger.exception(f'HTTP error occurred: {http_err}')
+    except Exception as err:
+        logger.exception(f'Other error occurred: {err}')
+    return QUESTION
 
 
 def error_callback(update, context):
@@ -251,9 +273,9 @@ def main() -> None:
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
-            QUESTION: [MessageHandler(Filters.text, question)],
-            ANSWER: [MessageHandler(Filters.text, answer)],
-            OPERATOR: [MessageHandler(Filters.text, operator)]
+            QUESTION: [CommandHandler('cancel', cancel), MessageHandler(Filters.text, question)],
+            ANSWER: [CommandHandler('cancel', cancel), MessageHandler(Filters.text, answer)],
+            OPERATOR: [CommandHandler('cancel', cancel), MessageHandler(Filters.text, operator)]
         },
         fallbacks=[CommandHandler('cancel', cancel)],
         allow_reentry=True
