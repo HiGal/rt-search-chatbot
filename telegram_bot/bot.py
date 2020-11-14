@@ -20,7 +20,8 @@ from telegram.ext import (
 from telegram import (
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
-    Update
+    Update,
+    ParseMode
 )
 from telegram.error import (
     TelegramError,
@@ -39,6 +40,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 QUESTION, ANSWER, OPERATOR = range(3)
+CATEGORY_PROPERTY, REQUEST_PROPERTY, CLARIFICATION_PROPERTY, QUESTION_PROPERTY, ANSWER_PROPERTY, REVIEW = range(6)
+
 BAD_ANSWER = "Ответ не подходит"
 NEW_ANSWER = "Новый вопрос"
 CALL_OPERATOR = "Позвать оператора"
@@ -154,7 +157,7 @@ def answer(update: Update, context: CallbackContext) -> int:
     return QUESTION
 
 
-def cancel(update: Update, context: CallbackContext) -> int:
+def questions_cancel(update: Update, context: CallbackContext) -> int:
     user = update.message.from_user
     logger.info("User %s canceled the conversation.", user.first_name)
     drop_states(user.id)
@@ -187,14 +190,14 @@ def resolve_response(update: Update, answer_data: str, answer_type: str, answer_
     if answer_type == 'final':
         reply_keyboard = [[NEW_ANSWER, BAD_ANSWER]]
         update.message.reply_text(
-            "🤖"+answer_data,
+            "🤖" + answer_data,
             reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
         )
         return ANSWER
     elif answer_type == 'clarification':
         reply_keyboard = [['\"' + item + '\"' for item in answer_options], [CALL_OPERATOR]]
         update.message.reply_text(
-            "🤖"+answer_data,
+            "🤖" + answer_data,
             reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
         )
         return QUESTION
@@ -265,6 +268,227 @@ def error_callback(update, context):
         # handle all other errors
 
 
+def addition_start(update: Update, context: CallbackContext) -> int:
+    reply_keyboard = [["Телефон", "Телевидение", "Мобильная связь", "Интернет", "Видеонаблюдение"]]
+
+    drop_userdata(context)
+    update.message.reply_text(
+        '🤖Чтобы добавить вопрос-ответ, нужно ввести:\n'
+        '- Сферу обслуживания вопроса\n'
+        '- Категорию вопроса\n'
+        '- Подкатегорию вопроса\n'
+        '- Сам вопрос\n'
+        '- Ответ на вопрос\n\n'
+        'Для начала вам нужно ввести cферу обслуживания вопроса.\n'
+        'Выберите её из предложенных кнопок.\n\n'
+        '<b>ВНИМАНИЕ!</b> Изменить эту часть позже нельзя',
+        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
+        parse_mode=ParseMode.HTML
+    )
+    user = update.message.from_user
+    logger.info("%s %s want to add new question", user.first_name, user.last_name)
+
+    return CATEGORY_PROPERTY
+
+
+def addition_cancel(update: Update, context: CallbackContext) -> int:
+    drop_userdata(context)
+    update.message.reply_text(
+        '🤖Процесс добавления нового вопроса отменен.\n\n'
+        '/start - задать вопрос\n'
+        '/add_question - добавить новый вопрос заново',
+        reply_markup=ReplyKeyboardRemove()
+    )
+    user = update.message.from_user
+    logger.info("%s %s canceled adding new question", user.first_name, user.last_name)
+    return ConversationHandler.END
+
+
+def addition_category(update: Update, context: CallbackContext) -> int:
+    user = update.message.from_user
+    text = update.message.text
+    logger.info("%s choosed %s category", user.first_name, text)
+
+    context.user_data['category'] = text
+    update.message.reply_text(
+        '🤖Теперь введите категорию вопроса.\n\n'
+        'Например, если сфера обслуживания была <b>Телефон</b>, то категорией является <b>Домашний телефон</b>.\n\n'
+        'Если вы уже заполняли этот пункт и хотите оставить раннее внесенные данные, отправьте /skip',
+        reply_markup=ReplyKeyboardRemove(), parse_mode=ParseMode.HTML
+    )
+
+    return REQUEST_PROPERTY
+
+
+def addition_request(update: Update, context: CallbackContext) -> int:
+    user = update.message.from_user
+    text = update.message.text
+
+    update.message.reply_text(
+        '🤖Теперь введите подкатегорию вопроса.\n\n'
+        'Например, если категория была <b>Домашний телефон</b>, то подкатегорией является <b>Подключение</b>.\n\n'
+        'Если вы уже заполняли этот пункт и хотите оставить раннее внесенные данные, отправьте /skip',
+        reply_markup=ReplyKeyboardRemove(), parse_mode=ParseMode.HTML
+    )
+
+    if text == "/skip":
+        return CLARIFICATION_PROPERTY
+
+    context.user_data['request'] = text
+    return CLARIFICATION_PROPERTY
+
+
+def addition_clarification(update: Update, context: CallbackContext) -> int:
+    user = update.message.from_user
+    text = update.message.text
+
+    update.message.reply_text(
+        '🤖Теперь введите сам вопрос.\n\n'
+        'Если вы уже заполняли этот пункт и хотите оставить раннее внесенные данные, отправьте /skip',
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+    if text == "/skip":
+        return QUESTION_PROPERTY
+
+    context.user_data['clarification'] = text
+    return QUESTION_PROPERTY
+
+
+def addition_question(update: Update, context: CallbackContext) -> int:
+    user = update.message.from_user
+    text = update.message.text
+
+    update.message.reply_text(
+        '🤖Теперь введите ответ на вопрос.\n\n'
+        'Если вы уже заполняли этот пункт и хотите оставить раннее внесенные данные, отправьте /skip',
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+    if text == "/skip":
+        return ANSWER_PROPERTY
+
+    context.user_data['question'] = text
+    return ANSWER_PROPERTY
+
+
+def addition_answer(update: Update, context: CallbackContext) -> int:
+    user = update.message.from_user
+    text = update.message.text
+
+    if text != "/skip":
+        context.user_data['answer'] = text
+
+    category = "❌" if 'category' not in context.user_data else context.user_data['category']
+    category = category.strip()
+    request = "❌" if 'request' not in context.user_data else context.user_data['request']
+    request = request.strip()
+    clarification = "❌" if 'clarification' not in context.user_data else context.user_data['clarification']
+    clarification = clarification.strip()
+    question_temp = "❌" if 'question' not in context.user_data else context.user_data['question']
+    question_temp = question_temp.strip()
+    answer_temp = "❌" if 'answer' not in context.user_data else context.user_data['answer']
+    answer_temp = answer_temp.strip()
+
+    reply_keyboard = [["Категория вопроса", "Подкатегория вопроса", "Вопрос", "Ответ"],
+                      ["Завершить"]]
+
+    update.message.reply_text(
+        '🤖Ваши введенные данные: '
+        '\nСфера обслуживания вопроса: ' + category +
+        '\nКатегория вопроса: ' + request +
+        '\nПодкатегория вопроса: ' + clarification +
+        '\nВопрос: ' + question_temp +
+        '\nОтвет: ' + answer_temp + "\n\n"
+                                    "Все поля кроме подкатегории вопроса должны быть заполнены.\n"
+                                    "Желаете что-то изменить или завершить добавление вопроса-ответа?",
+        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+    )
+
+    return REVIEW
+
+
+def addition_review(update: Update, context: CallbackContext) -> int:
+    user = update.message.from_user
+    text = update.message.text
+
+    if text == "Категория вопроса":
+        update.message.reply_text("🤖Отправьте /skip и введите её.",
+                                  reply_markup=ReplyKeyboardRemove())
+        return CATEGORY_PROPERTY
+    elif text == "Подкатегория вопроса":
+        update.message.reply_text("🤖Отправьте /skip и введите её.",
+                                  reply_markup=ReplyKeyboardRemove())
+        return REQUEST_PROPERTY
+    elif text == "Вопрос":
+        update.message.reply_text("🤖Отправьте /skip и введите его.",
+                                  reply_markup=ReplyKeyboardRemove())
+        return CLARIFICATION_PROPERTY
+    elif text == "Ответ":
+        update.message.reply_text("🤖Отправьте /skip и введите его.",
+                                  reply_markup=ReplyKeyboardRemove())
+        return QUESTION_PROPERTY
+    elif text == "Завершить":
+        category = context.user_data['category'].strip()
+        request = None if 'request' not in context.user_data else context.user_data['request'].strip()
+        if request is None:
+            update.message.reply_text("🤖Категория должна быть введена.\n"
+                                      "Отправьте /skip и введите её.",
+                                      reply_markup=ReplyKeyboardRemove())
+            return CATEGORY_PROPERTY
+        clarification = None if 'clarification' not in context.user_data else context.user_data['clarification'].strip()
+        if clarification is None:
+            clarification = "Нет"
+        question_temp = None if 'question' not in context.user_data else context.user_data['question'].strip()
+        if question_temp is None:
+            update.message.reply_text("🤖Вопрос должен быть введен.\n"
+                                      "Отправьте /skip и введите его.",
+                                      reply_markup=ReplyKeyboardRemove())
+            return CLARIFICATION_PROPERTY
+        answer_temp = None if 'answer' not in context.user_data else context.user_data['answer'].strip()
+        if answer_temp is None:
+            update.message.reply_text("🤖Ответ должен быть введен.\n"
+                                      "Отправьте /skip и введите его.",
+                                      reply_markup=ReplyKeyboardRemove())
+            return QUESTION_PROPERTY
+
+        try:
+            response = requests.post(
+                "{}/bot/v1/index/new".format(host_address),
+                json={
+                    "category": category,
+                    "request": request,
+                    "clarification": clarification,
+                    "question": question_temp,
+                    "answer": answer_temp
+                })
+            response.raise_for_status()
+            logger.info(
+                "%s added question: category=(%s), request=(%s), clarification=(%s), question=(%s), answer=(%s)",
+                user.first_name, category, request, clarification, question_temp, answer_temp)
+            update.message.reply_text("🤖Вопрос-ответ добавлен успешно! \n\n"
+                                      "/start - Задать новый вопрос\n"
+                                      "/add_question - Добавить новый вопрос-ответ",
+                                      reply_markup=ReplyKeyboardRemove())
+        except HTTPError as http_err:
+            logger.exception(f'HTTP error occurred: {http_err}')
+        except Exception as err:
+            logger.exception(f'Other error occurred: {err}')
+
+
+def drop_userdata(context: CallbackContext):
+    if 'category' in context.user_data:
+        del context.user_data['category']
+    if 'request' in context.user_data:
+        del context.user_data['request']
+    if 'clarification' in context.user_data:
+        del context.user_data['clarification']
+    if 'question' in context.user_data:
+        del context.user_data['question']
+    if 'answer' in context.user_data:
+        del context.user_data['answer']
+
+
 def main() -> None:
     # Create the Updater and pass it your bot's token.
     # Make sure to set use_context=True to use the new context based callbacks
@@ -275,18 +499,39 @@ def main() -> None:
     dispatcher = updater.dispatcher
 
     # Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
-    conv_handler = ConversationHandler(
+    questions_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
-            QUESTION: [CommandHandler('cancel', cancel), MessageHandler(Filters.text, question)],
-            ANSWER: [CommandHandler('cancel', cancel), MessageHandler(Filters.text, answer)],
-            OPERATOR: [CommandHandler('cancel', cancel), MessageHandler(Filters.text, operator)]
+            QUESTION: [CommandHandler('cancel', questions_cancel), MessageHandler(Filters.text, question)],
+            ANSWER: [CommandHandler('cancel', questions_cancel), MessageHandler(Filters.text, answer)],
+            OPERATOR: [CommandHandler('cancel', questions_cancel), MessageHandler(Filters.text, operator)]
         },
-        fallbacks=[CommandHandler('cancel', cancel)],
+        fallbacks=[CommandHandler('cancel', questions_cancel)],
         allow_reentry=True
     )
 
-    dispatcher.add_handler(conv_handler)
+    # NEW_QUESTION, CATEGORY_PROPERTY, REQUEST_PROPERTY, CLARIFICATION_PROPERTY, QUESTION_PROPERTY, ANSWER_PROPERTY, REVIEW
+    new_question_handler = ConversationHandler(
+        entry_points=[CommandHandler('add_question', addition_start)],
+        states={
+            CATEGORY_PROPERTY: [CommandHandler('addition_cancel', questions_cancel),
+                                MessageHandler(Filters.text, addition_category)],
+            REQUEST_PROPERTY: [CommandHandler('addition_cancel', questions_cancel),
+                               MessageHandler(Filters.text, addition_request)],
+            CLARIFICATION_PROPERTY: [CommandHandler('addition_cancel', questions_cancel),
+                                     MessageHandler(Filters.text, addition_clarification)],
+            QUESTION_PROPERTY: [CommandHandler('addition_cancel', questions_cancel),
+                                MessageHandler(Filters.text, addition_question)],
+            ANSWER_PROPERTY: [CommandHandler('addition_cancel', questions_cancel),
+                              MessageHandler(Filters.text, addition_answer)],
+            REVIEW: [CommandHandler('addition_cancel', questions_cancel), MessageHandler(Filters.text, addition_review)]
+        },
+        fallbacks=[CommandHandler('addition_cancel', addition_cancel)],
+        allow_reentry=True
+    )
+
+    dispatcher.add_handler(questions_handler)
+    dispatcher.add_handler(new_question_handler)
     dispatcher.add_error_handler(error_callback)
 
     logger.info("Bot initialized")
