@@ -1,11 +1,16 @@
 import numpy as np
 from fastapi import APIRouter
 import requests
+from model import answer
 
 router = APIRouter()
 
+def query_analyzer(query_vector, doc_vecs):
+    score = np.sum(query_vector * doc_vecs, axis=1) / np.linalg.norm(doc_vecs, axis=1)
+    topk_idx = np.argsort(score)[::-1][:10]
+    return topk_idx
 
-@router.post("/bot/v1/question/{chat_id}")
+@router.post("/bot/v1/question/{chat_id}", response_model=answer.Answer)
 async def question(body: dict, chat_id: str):
     bert_body = {
         "id": chat_id,
@@ -24,8 +29,22 @@ async def question(body: dict, chat_id: str):
     }
     return response_body
 
+@router.get("/bot/v1/question/{chat_id}/incorrect", response_model=answer.Answer)
+def incorrect_answer():
+    # TODO: Достать контекст
+    # TODO: Проверить что в нужном стейте
+    # TODO: Вернуть след вопрос
+    pass
 
-def query_analyzer(query_vector, doc_vecs):
-    score = np.sum(query_vector * doc_vecs, axis=1) / np.linalg.norm(doc_vecs, axis=1)
-    topk_idx = np.argsort(score)[::-1][:10]
-    return topk_idx
+@router.get("/bot/v1/question/{chat_id}/cancel")
+def cancel_question():
+    # TODO: Проверить что контекст есть
+    # TODO: Удалить из контекста запись
+    pass
+
+@router.get("/bot/v1/question/{chat_id}/operator")
+def operator():
+    # TODO: Проверить что контекст есть
+    # TODO: Сформировать ответ с AnswerType.operator
+    # TODO: Удалить из контекста запись
+    pass
