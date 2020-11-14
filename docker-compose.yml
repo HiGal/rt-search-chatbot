@@ -37,6 +37,12 @@ services:
       - "questions_postgres_db"
       - "context_redis_db"
       - "indexer"
+  telegram_bot:
+    build: ./telegram_bot
+    environment:
+      SECRET: 1449092444:AAFQCi5W-zAD4_49OU8830ignA3l5M65kpM
+    links:
+      - "python-app"
 
 volumes:
   questions-db-data:

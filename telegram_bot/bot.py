@@ -7,7 +7,7 @@ import logging
 import requests
 from requests.exceptions import HTTPError
 
-from telegram_bot.secret import token, host_address
+from secret import token, host_address
 
 from telegram.ext import (
     Updater,

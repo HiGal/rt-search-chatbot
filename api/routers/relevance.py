@@ -18,6 +18,7 @@ def query_analyzer(query_vector, doc_vecs):
 @router.post("/bot/v1/question/{chat_id}", response_model=answer.Answer)
 async def question(body: dict, chat_id: str):
     text = str(body['question'])
+    print(text)
     bert_body = {
         "id": chat_id,
         "texts": [text],
@@ -32,11 +33,11 @@ async def question(body: dict, chat_id: str):
     topk_idx = query_analyzer(query_vector, doc_vecs)
 
     db_controller.cursor.execute(f'SELECT "Ответ" FROM knowledge_base WHERE index = {topk_idx[0]}')
-    answer_text = db_controller.cursor.fetchall()
+    answer_text = db_controller.cursor.fetchone()
     response_body = {
         "id": chat_id,
         "type": answer.AnswerType.final, # TODO: добавить логику запросов
-        "answer": str(answer_text[0]), # TODO: retrieve document by its id and put text here instead its index
+        "answer": answer_text[0], # TODO: retrieve document by its id and put text here instead its index
         # TODO: логика с уточяющими вопросами
     }
     return response_body
