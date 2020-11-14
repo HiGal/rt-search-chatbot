@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Author: Lenar Gumerov (tg: @lenargum)
+Author:  Lenar Gumerov  (tg: @lenargum)
 """
 
 import logging
@@ -53,6 +53,7 @@ def start(update: Update, context: CallbackContext) -> int:
         reply_markup=ReplyKeyboardRemove()
     )
     user = update.message.from_user
+    drop_states(user.id)
     logger.info("%s %s started dialogue.", user.first_name, user.last_name)
 
     return QUESTION
@@ -156,6 +157,7 @@ def answer(update: Update, context: CallbackContext) -> int:
 def cancel(update: Update, context: CallbackContext) -> int:
     user = update.message.from_user
     logger.info("User %s canceled the conversation.", user.first_name)
+    drop_states(user.id)
     update.message.reply_text(
         '🤖Начнем сначала!\n\n'
         'Отправьте интересующий вас вопрос', reply_markup=ReplyKeyboardRemove()
@@ -222,17 +224,20 @@ def new_question(update: Update, user_id) -> int:
         "🤖Ждем ваш новый вопрос!",
         reply_markup=ReplyKeyboardRemove()
     )
+    drop_states(user_id)
+    return QUESTION
 
+
+def drop_states(chatid):
     try:
         response = requests.get(
-            "{}/bot/v1/question/{}/cancel".format(host_address, user_id)
+            "{}/bot/v1/question/{}/cancel".format(host_address, chatid)
         )
         response.raise_for_status()
     except HTTPError as http_err:
         logger.exception(f'HTTP error occurred: {http_err}')
     except Exception as err:
         logger.exception(f'Other error occurred: {err}')
-    return QUESTION
 
 
 def error_callback(update, context):
