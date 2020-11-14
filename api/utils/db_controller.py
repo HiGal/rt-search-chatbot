@@ -43,3 +43,8 @@ def init():
                            "Вопрос TEXT)"
     cursor.execute(unknown_create_query)
     connection.commit()
+
+
+cursor.execute('SELECT "Ответ" FROM knowledge_base WHERE index = %s', (171, ))
+answer_text = cursor.fetchone()[0]
+print(answer_text)

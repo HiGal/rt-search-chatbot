@@ -48,10 +48,3 @@ async def index_one(body: dict):
         db_controller.cursor.execute("INSERT INTO vectors VALUES(%s, %s)", (max_index + 1, [0]))
         return {"vector": vector}
     return r.raise_for_status()
-
-# index_all()
-db_controller.cursor.execute("SELECT * FROM vectors")
-data = db_controller.cursor.fetchall()
-print(data)
-doc_vecs = np.array([row for _,row in data])
-print(doc_vecs.shape)
