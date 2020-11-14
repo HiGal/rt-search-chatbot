@@ -1,6 +1,7 @@
 import psycopg2
 import pandas as pd
 from sqlalchemy import create_engine
+from api.model import context
 import os
 db_name = os.getenv('POSTGRES_DB')
 db_user = os.getenv('POSTGRES_USER')
@@ -50,7 +51,8 @@ def init():
     connection.commit()
 
 
-def push_unknown(question, attempt, rtype=None, request=None, suggestion=None):
+def push_unknown(context):
     cursor.execute('INSERT INTO unknown_questions("Вопрос", "Попытка", "Тип", "Запрос", "Предположение") '
-                   'VALUES(%s, %s, %s, %s, %s)', (question, attempt, rtype, request, suggestion))
+                   'VALUES(%s, %s, %s, %s, %s)', (context.original_question, context.attempt, context.type,
+                                                  context.request, context.suggestion))
     connection.commit()
