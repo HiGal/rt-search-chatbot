@@ -18,14 +18,15 @@ async def question(body: dict, chat_id: str):
         "is_tokenized": True
     }
     query_vector = requests.post("http://127.0.0.1:8125/encode", json=bert_body).json()['result']
+    # TODO: достать контекст
     # TODO: достать вектора документов из БД
     doc_vecs = np.random.randn(50, 768)
     topk_idx = query_analyzer(query_vector, doc_vecs)
     response_body = {
         "id": chat_id,
-        "type": "final", #TODO: states
+        "type": answer.AnswerType.final, # TODO: добавить логику запросов
         "answer": str(topk_idx[0]), # TODO: retrieve document by its id and put text here instead its index
-        "options": ["string"], # TODO: логика с уточяющими вопросами
+        # TODO: логика с уточяющими вопросами
     }
     return response_body
 
