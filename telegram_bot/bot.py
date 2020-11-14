@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Author: Lenar Gumerov (tg: @lenargum)
+Author:  Lenar Gumerov  (tg: @lenargum)
 """
 
 import logging
