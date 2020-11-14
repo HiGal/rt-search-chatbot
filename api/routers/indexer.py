@@ -45,6 +45,6 @@ async def index_one(body: dict):
     r = requests.post("http://indexer:8125/encode", json=bert_body)
     if r.status_code == 200:
         vector = r.json()['result']
-        db_controller.cursor.execute("INSERT INTO vectors VALUES(%s, %s)", (max_index + 1, [0]))
+        db_controller.cursor.execute("INSERT INTO vectors VALUES(%s, %s)", (max_index + 1, vector[0]))
         return {"vector": vector}
     return r.raise_for_status()
