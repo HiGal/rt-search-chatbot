@@ -1,0 +1,23 @@
+version: '3.1'
+
+services:
+
+  questions_postgres_db:
+    image: postgres
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      -  questions-db-data:/var/lib/postgresql/data/
+      - ./data/db_data:/app
+    environment:
+      POSTGRES_USER: farit_priglasil
+      POSTGRES_PASSWORD: f4r17_pr1gl451l
+      POSTGRES_DB: questions
+  context_redis_db:
+    image: redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  questions-db-data:
