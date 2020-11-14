@@ -3,6 +3,9 @@ import pandas as pd
 from sqlalchemy import create_engine
 from api.model import context
 import os
+
+from api.model.context import Question
+
 db_name = os.getenv('POSTGRES_DB')
 db_user = os.getenv('POSTGRES_USER')
 db_password = os.getenv('POSTGRES_PASSWORD')
@@ -56,3 +59,16 @@ def push_unknown(context):
                    'VALUES(%s, %s, %s, %s, %s)', (context.original_question, context.attempt, context.type,
                                                   context.request, context.suggestion))
     connection.commit()
+
+
+def get_question(id):
+    cursor.execute('SELECT * FROM knowledge_base WHERE index = %s', (id, ))
+    db_inst = cursor.fetchone()
+    question = Question()
+    question.question = db_inst[4]
+    question.answer = db_inst[5]
+    question.type = db_inst[3]
+    question.request = db_inst[1]
+    question.suggestion = db_inst[2]
+    question.distanse = 0
+    return question
