@@ -6,7 +6,7 @@ router = APIRouter()
 
 
 @router.get("/bot/v1/index/all")
-def index_all():
+async def index_all():
     df = pd.read_csv("../data/KB.csv")
     for index, row in df.iterrows():
         print(row.index)
