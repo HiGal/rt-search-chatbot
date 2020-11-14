@@ -10,16 +10,18 @@ router = APIRouter()
 async def index_all():
     db_controller.prep()
     db_controller.init()
-    df = pd.read_csv("./KB.csv")
-    for index, row in df.iterrows():
+    db_controller.cursor.execute('SELECT index, "Вопрос" FROM knowledge_base')
+    questions = db_controller.cursor.fetchall()
+    for question in questions:
         # print(row['Вопрос'])
+        print(question[1])
         bert_body = {
-            "id": index,
-            "texts": [row['Вопрос']],
+            "id": question[0],
+            "texts": [question[1]],
             "is_tokenized": False,
         }
         vector = requests.post("http://indexer:8125/encode", json=bert_body).json()['result']
-        db_controller.cursor.execute("INSERT INTO vectors VALUES(%s, %s)", (index, vector[0]))
+        db_controller.cursor.execute("INSERT INTO vectors VALUES(%s, %s)", (question[0], vector[0]))
     db_controller.connection.commit()
 
 
