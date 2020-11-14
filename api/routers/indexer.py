@@ -7,7 +7,7 @@ router = APIRouter()
 
 
 @router.get("/bot/v1/index/all")
-def index_all():
+async def index_all():
     db_controller.prep()
     db_controller.init()
     df = pd.read_csv("../KB.csv")
