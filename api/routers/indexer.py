@@ -1,8 +1,7 @@
 from fastapi import APIRouter
 import requests
 import pandas as pd
-from api.utils import db_controller
-import numpy as np
+from utils import db_controller
 
 router = APIRouter()
 
@@ -11,7 +10,7 @@ router = APIRouter()
 async def index_all():
     db_controller.prep()
     db_controller.init()
-    df = pd.read_csv("../KB.csv")
+    df = pd.read_csv("./KB.csv")
     for index, row in df.iterrows():
         # print(row['Вопрос'])
         bert_body = {
@@ -19,7 +18,7 @@ async def index_all():
             "texts": [row['Вопрос']],
             "is_tokenized": False,
         }
-        vector = requests.post("http://10.241.1.250:8125/encode", json=bert_body).json()['result']
+        vector = requests.post("http://indexer:8125/encode", json=bert_body).json()['result']
         db_controller.cursor.execute("INSERT INTO vectors VALUES(%s, %s)", (index, vector[0]))
     db_controller.connection.commit()
 
@@ -42,7 +41,7 @@ async def index_one(body: dict):
         "texts": [body["question"]],
         "is_tokenized": is_tokenized
     }
-    r = requests.post("http://127.0.0.1:8125/encode", json=bert_body)
+    r = requests.post("http://indexer:8125/encode", json=bert_body)
     if r.status_code == 200:
         vector = r.json()['result']
         db_controller.cursor.execute("INSERT INTO vectors VALUES(%s, %s)", (max_index + 1, [0]))

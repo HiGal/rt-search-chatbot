@@ -18,6 +18,25 @@ services:
     image: redis
     ports:
       - "6379:6379"
+  indexer:
+    build: ./indexer
+    volumes:
+      - ./data/rubert_cased_L-12_H-768_A-12_v1:/indexer/rubert_cased_L-12_H-768_A-12_v1
+    links:
+      - "questions_postgres_db"
+      - "context_redis_db"
+  python-app:
+    build: ./api
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_USER: farit_priglasil
+      POSTGRES_PASSWORD: f4r17_pr1gl451l
+      POSTGRES_DB: questions
+    links:
+      - "questions_postgres_db"
+      - "context_redis_db"
+      - "indexer"
 
 volumes:
   questions-db-data:

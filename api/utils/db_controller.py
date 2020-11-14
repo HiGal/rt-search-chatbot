@@ -1,15 +1,16 @@
 import psycopg2
 import pandas as pd
 from sqlalchemy import create_engine
-db_name = "questions"
-db_user = "farit_priglasil"
-db_password = "f4r17_pr1gl451l"
+import os
+db_name = os.getenv('POSTGRES_DB')
+db_user = os.getenv('POSTGRES_USER')
+db_password = os.getenv('POSTGRES_PASSWORD')
 
 connection = psycopg2.connect(
     database=db_name,
     user=db_user,
     password=db_password,
-    host="127.0.0.1",
+    host="questions_postgres_db",
     port="5432"
 )
 
@@ -24,8 +25,8 @@ def prep():
 
 
 def init():
-    connection1 = create_engine(f"postgresql://{db_user}:{db_password}@localhost:5432/{db_name}")
-    df = pd.read_csv("../KB.csv")
+    connection1 = create_engine(f"postgresql://{db_user}:{db_password}@questions_postgres_db:5432/{db_name}")
+    df = pd.read_csv("./KB.csv")
     df.to_sql("knowledge_base", con=connection1)
     unique_query = """drop index ix_knowledge_base_index;
                         create unique index ix_knowledge_base_index
@@ -43,8 +44,3 @@ def init():
                            "Вопрос TEXT)"
     cursor.execute(unknown_create_query)
     connection.commit()
-
-
-cursor.execute('SELECT "Ответ" FROM knowledge_base WHERE index = %s', (171, ))
-answer_text = cursor.fetchone()[0]
-print(answer_text)
