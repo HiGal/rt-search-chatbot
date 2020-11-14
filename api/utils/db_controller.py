@@ -25,7 +25,7 @@ def prep():
 
 def init():
     connection1 = create_engine(f"postgresql://{db_user}:{db_password}@localhost:5432/{db_name}")
-    df = pd.read_csv("../KB.csv")
+    df = pd.read_csv("../data/KB.csv")
     df.to_sql("knowledge_base", con=connection1)
     unique_query = """drop index ix_knowledge_base_index;
                         create unique index ix_knowledge_base_index
