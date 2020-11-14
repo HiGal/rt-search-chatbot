@@ -47,4 +47,4 @@ typing-extensions
 urllib3
 uvicorn==0.12.2
 Werkzeug==1.0.1
-
+sklearn
