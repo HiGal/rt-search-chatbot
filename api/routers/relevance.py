@@ -1,9 +1,10 @@
 import numpy as np
 from fastapi import APIRouter
 import requests
-from api.model import answer
-from api.utils import db_controller
+from model import answer
+from utils import db_controller
 from sklearn.metrics.pairwise import cosine_distances
+
 
 router = APIRouter()
 
@@ -22,7 +23,7 @@ async def question(body: dict, chat_id: str):
         "texts": [text],
         "is_tokenized": False
     }
-    query_vector = requests.post("http://127.0.0.1:8125/encode", json=bert_body).json()['result']
+    query_vector = requests.post("http://indexer:8125/encode", json=bert_body).json()['result']
     # TODO: достать контекст
     # TODO: достать вектора документов из БД
     db_controller.cursor.execute("SELECT * FROM vectors ORDER BY index ASC")
