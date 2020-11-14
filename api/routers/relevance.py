@@ -12,13 +12,11 @@ def query_analyzer(query_vector, doc_vecs):
     # score = np.sum(query_vector * doc_vecs, axis=1) / np.linalg.norm(doc_vecs, axis=1)
     score = cosine_distances(query_vector, doc_vecs)[0]
     topk_idx = np.argsort(score)[:3]
-    print(topk_idx)
     return topk_idx
 
 @router.post("/bot/v1/question/{chat_id}", response_model=answer.Answer)
 async def question(body: dict, chat_id: str):
     text = str(body['question'])
-    print(text)
     bert_body = {
         "id": chat_id,
         "texts": [text],

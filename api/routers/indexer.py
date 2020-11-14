@@ -14,7 +14,6 @@ async def index_all():
     questions = db_controller.cursor.fetchall()
     for question in questions:
         # print(row['Вопрос'])
-        print(question[1])
         bert_body = {
             "id": question[0],
             "texts": [question[1]],

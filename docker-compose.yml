@@ -40,7 +40,7 @@ services:
   telegram_bot:
     build: ./telegram_bot
     environment:
-      SECRET: 1449092444:AAFQCi5W-zAD4_49OU8830ignA3l5M65kpM
+      SECRET: tg_secret_key
     links:
       - "python-app"
 
