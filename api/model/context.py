@@ -4,6 +4,7 @@ from enum import Enum
 
 class State(str, Enum):
     clarification = "clarification"
+    answered = "answered"
 
 class Question(BaseModel):
     question: str
@@ -19,6 +20,9 @@ class Context(BaseModel):
     attempt: int
     candidates: list # here questions
     type: Optional[str] = None
+    possible_types: Optional[list] = None
+    possible_requests: Optional[list] = None
+    possible_suggestions: Optional[list] = None
     request: Optional[str] = None
     suggestion: Optional[str] = None
 

@@ -3,18 +3,20 @@ import pandas as pd
 from sqlalchemy import create_engine
 from api.model import context
 import os
-
 from api.model.context import Question
 
-db_name = os.getenv('POSTGRES_DB')
-db_user = os.getenv('POSTGRES_USER')
-db_password = os.getenv('POSTGRES_PASSWORD')
+# db_name = os.getenv('POSTGRES_DB')
+# db_user = os.getenv('POSTGRES_USER')
+# db_password = os.getenv('POSTGRES_PASSWORD')
+db_name = "questions"
+db_user = "farit_priglasil"
+db_password = "f4r17_pr1gl451l"
 
 connection = psycopg2.connect(
     database=db_name,
     user=db_user,
     password=db_password,
-    host="questions_postgres_db",
+    host="127.0.0.1",  # "questions_postgres_db",
     port="5432"
 )
 
@@ -62,13 +64,13 @@ def push_unknown(context):
 
 
 def get_question(id):
-    cursor.execute('SELECT * FROM knowledge_base WHERE index = %s', (id, ))
+    cursor.execute(f'SELECT * FROM knowledge_base WHERE index = {id}')
     db_inst = cursor.fetchone()
-    question = Question()
-    question.question = db_inst[4]
-    question.answer = db_inst[5]
-    question.type = db_inst[3]
-    question.request = db_inst[1]
-    question.suggestion = db_inst[2]
-    question.distanse = 0
+    question = Question(
+        question=db_inst[4],
+        answer=db_inst[5],
+        type=db_inst[3],
+        request=db_inst[1],
+        suggestion=db_inst[2],
+        distanse=0)
     return question
