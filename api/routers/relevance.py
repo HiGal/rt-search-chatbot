@@ -1,7 +1,8 @@
 import numpy as np
 from fastapi import APIRouter
 import requests
-from model import answer
+from api.model import answer
+from api.utils import db_controller
 
 router = APIRouter()
 
@@ -20,12 +21,17 @@ async def question(body: dict, chat_id: str):
     query_vector = requests.post("http://127.0.0.1:8125/encode", json=bert_body).json()['result']
     # TODO: достать контекст
     # TODO: достать вектора документов из БД
-    doc_vecs = np.random.randn(50, 768)
+    db_controller.cursor.execute("SELECT * FROM vectors")
+    data = db_controller.cursor.fetchall()
+    print(data)
+    doc_vecs = np.array([row for _, row in data])
     topk_idx = query_analyzer(query_vector, doc_vecs)
+    db_controller.cursor.execute('SELECT "Ответ" FROM knowledge_base WHERE index = %s', (topk_idx[0]))
+    answer_text = db_controller.cursor.fetchone[0]
     response_body = {
         "id": chat_id,
         "type": answer.AnswerType.final, # TODO: добавить логику запросов
-        "answer": str(topk_idx[0]), # TODO: retrieve document by its id and put text here instead its index
+        "answer": answer_text, # TODO: retrieve document by its id and put text here instead its index
         # TODO: логика с уточяющими вопросами
     }
     return response_body

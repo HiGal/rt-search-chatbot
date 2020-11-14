@@ -43,7 +43,3 @@ def init():
                            "Вопрос TEXT)"
     cursor.execute(unknown_create_query)
     connection.commit()
-
-
-prep()
-init()

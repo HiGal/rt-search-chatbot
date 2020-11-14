@@ -2,12 +2,13 @@ from fastapi import APIRouter
 import requests
 import pandas as pd
 from api.utils import db_controller
+import numpy as np
 
 router = APIRouter()
 
 
 @router.get("/bot/v1/index/all")
-async def index_all():
+def index_all():
     db_controller.prep()
     db_controller.init()
     df = pd.read_csv("../KB.csv")
@@ -18,7 +19,6 @@ async def index_all():
             "texts": [row['Вопрос']],
             "is_tokenized": False,
         }
-        print(bert_body)
         vector = requests.post("http://10.241.1.250:8125/encode", json=bert_body).json()['result']
         db_controller.cursor.execute("INSERT INTO vectors VALUES(%s, %s)", (index, vector[0]))
     db_controller.connection.commit()
@@ -49,4 +49,9 @@ async def index_one(body: dict):
         return {"vector": vector}
     return r.raise_for_status()
 
-index_all()
+# index_all()
+db_controller.cursor.execute("SELECT * FROM vectors")
+data = db_controller.cursor.fetchall()
+print(data)
+doc_vecs = np.array([row for _,row in data])
+print(doc_vecs.shape)
