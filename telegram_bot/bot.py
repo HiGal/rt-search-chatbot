@@ -65,8 +65,10 @@ def question(update: Update, context: CallbackContext) -> int:
 
     logger.info("Question of %s: %s", user.first_name, text)
 
+    print(text)
     if text[0] == '\"' and text[-1] == '\"':
         text = text[1:-1]
+    print(text)
 
     if text == CALL_OPERATOR:
         try:
@@ -97,10 +99,11 @@ def question(update: Update, context: CallbackContext) -> int:
     answer_options = []
 
     try:
+        print(update.message.text)
         response = requests.post(
             "{}/bot/v1/question/{}".format(host_address, user.id),
             json={
-                "question": update.message.text
+                "question": update.message.text.replace("\"","")
             })
 
         response.raise_for_status()
