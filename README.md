@@ -1,5 +1,8 @@
 # Leaders_of_digital_Farit_priglasil
 
+## Важно
+Для запуска Telegram бота нужен API key, который прдоставляется бесплтано (https://core.telegram.org/api/obtaining_api_id), наш не указан в целях безопасности.
+
 ## Клонирование репозитория
 ```
 git clone https://github.com/HiGal/rt-search-chatbot.git
