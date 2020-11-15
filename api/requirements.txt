@@ -37,6 +37,8 @@ pytz==2020.1
 PyYAML==5.3.1
 pyzmq==20.0.0
 randomize==0.14
+scikit-learn
+redis
 requests
 six 
 SQLAlchemy 

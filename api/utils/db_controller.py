@@ -2,6 +2,8 @@ import psycopg2
 import pandas as pd
 from sqlalchemy import create_engine
 import os
+from model.context import Question
+
 db_name = os.getenv('POSTGRES_DB')
 db_user = os.getenv('POSTGRES_USER')
 db_password = os.getenv('POSTGRES_PASSWORD')
@@ -41,6 +43,29 @@ def init():
     cursor.execute(vectors_create_query)
     unknown_create_query = "CREATE TABLE IF NOT EXISTS unknown_questions(" \
                            "index SERIAL PRIMARY KEY," \
-                           "Вопрос TEXT)"
+                           "Вопрос TEXT," \
+                           "Тип TEXT," \
+                           "Запрос TEXT," \
+                           "Предположение TEXT)"
     cursor.execute(unknown_create_query)
     connection.commit()
+
+
+def push_unknown(context):
+    cursor.execute('INSERT INTO unknown_questions("Вопрос", "Тип", "Запрос", "Предположение") '
+                   'VALUES(%s, %s, %s, %s)', (context["original_question"], context["type"],
+                                                  context["request"], context["suggestion"]))
+    connection.commit()
+
+
+def get_question(id):
+    cursor.execute(f'SELECT * FROM knowledge_base WHERE index = {id}')
+    db_inst = cursor.fetchone()
+    question = Question(
+        question=db_inst[4],
+        answer=db_inst[5],
+        type=db_inst[3],
+        request=db_inst[1],
+        suggestion=db_inst[2],
+        distanse=0)
+    return question

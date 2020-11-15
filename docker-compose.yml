@@ -25,6 +25,8 @@ services:
     links:
       - "questions_postgres_db"
       - "context_redis_db"
+    ports:
+      - "8125:8125"
   python-app:
     build: ./api
     ports:
