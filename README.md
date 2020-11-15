@@ -62,7 +62,12 @@ curl -X POST "http://127.0.0.1:8000/bot/v1/question/1" -H  "accept: application/
   "options": null
 }
 ```
-
+## API
+![](https://i.imgur.com/NIkRvjn.png)
+Более подробно ознакомиться с API можно (при поднятом сервисе) здесь:  
+```
+http://127.0.0.1:8000/docs
+```
 
 ## Краткое описание работы программы
 
