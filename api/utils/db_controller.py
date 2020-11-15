@@ -1,22 +1,18 @@
 import psycopg2
 import pandas as pd
 from sqlalchemy import create_engine
-from api.model import context
 import os
-from api.model.context import Question
+from model.context import Question
 
-# db_name = os.getenv('POSTGRES_DB')
-# db_user = os.getenv('POSTGRES_USER')
-# db_password = os.getenv('POSTGRES_PASSWORD')
-db_name = "questions"
-db_user = "farit_priglasil"
-db_password = "f4r17_pr1gl451l"
+db_name = os.getenv('POSTGRES_DB')
+db_user = os.getenv('POSTGRES_USER')
+db_password = os.getenv('POSTGRES_PASSWORD')
 
 connection = psycopg2.connect(
     database=db_name,
     user=db_user,
     password=db_password,
-    host="127.0.0.1",  # "questions_postgres_db",
+    host="questions_postgres_db",
     port="5432"
 )
 
@@ -48,7 +44,6 @@ def init():
     unknown_create_query = "CREATE TABLE IF NOT EXISTS unknown_questions(" \
                            "index SERIAL PRIMARY KEY," \
                            "Вопрос TEXT," \
-                           "Попытка INT," \
                            "Тип TEXT," \
                            "Запрос TEXT," \
                            "Предположение TEXT)"
@@ -57,9 +52,9 @@ def init():
 
 
 def push_unknown(context):
-    cursor.execute('INSERT INTO unknown_questions("Вопрос", "Попытка", "Тип", "Запрос", "Предположение") '
-                   'VALUES(%s, %s, %s, %s, %s)', (context.original_question, context.attempt, context.type,
-                                                  context.request, context.suggestion))
+    cursor.execute('INSERT INTO unknown_questions("Вопрос", "Тип", "Запрос", "Предположение") '
+                   'VALUES(%s, %s, %s, %s)', (context["original_question"], context["type"],
+                                                  context["request"], context["suggestion"]))
     connection.commit()
 
 

@@ -11,7 +11,7 @@ import redis
 
 router = APIRouter()
 
-REDIS_HOST = "localhost"
+REDIS_HOST = "context_redis_db"
 REDIS_PORT = 6379
 
 
@@ -27,7 +27,6 @@ def question(body: dict, chat_id: str):
     r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
     text = str(body['question'])
     if r.exists(chat_id):
-        print("We know you")  # TODO: we know you
         context = json.loads(r.get(chat_id).decode())
         if context["state"] == ctx.State.clarification:
             if context['type'] is None:
@@ -42,7 +41,7 @@ def question(body: dict, chat_id: str):
                         context["possible_requests"] = list(reqs)
                         response_body = {
                             "id": chat_id,
-                            "type": answer.AnswerType.clarification,  # TODO: добавить логику запросов
+                            "type": answer.AnswerType.clarification,
                             "answer": "Что Вас интересует?",
                             "options": list(reqs)
                         }
@@ -54,7 +53,7 @@ def question(body: dict, chat_id: str):
                         context["possible_suggestions"] = list(clars)
                         response_body = {
                             "id": chat_id,
-                            "type": answer.AnswerType.clarification,  # TODO: добавить логику запросов
+                            "type": answer.AnswerType.clarification,
                             "answer": "Что Вас интересует?",
                             "options": list(clars)
                         }
@@ -86,7 +85,7 @@ def question(body: dict, chat_id: str):
                         context["possible_suggestions"] = list(clars)
                         response_body = {
                             "id": chat_id,
-                            "type": answer.AnswerType.clarification,  # TODO: добавить логику запросов
+                            "type": answer.AnswerType.clarification,
                             "answer": "Что Вас интересует?",
                             "options": list(clars)
                         }
@@ -138,9 +137,7 @@ def question(body: dict, chat_id: str):
         "texts": [text],
         "is_tokenized": False
     }
-    query_vector = requests.post("http://127.0.0.1:8125/encode", json=bert_body).json()['result']
-    # TODO: достать контекст
-    # TODO: достать вектора документов из БД
+    query_vector = requests.post("http://indexer:8125/encode", json=bert_body).json()['result']
     db_controller.cursor.execute("SELECT * FROM vectors ORDER BY index ASC")
     data = db_controller.cursor.fetchall()
     doc_vecs = np.array([row for _, row in data])
@@ -152,7 +149,7 @@ def question(body: dict, chat_id: str):
     if (scores[1] - scores[0]) > 0.01:
         response_body = {
             "id": chat_id,
-            "type": answer.AnswerType.final,  # TODO: добавить логику запросов
+            "type": answer.AnswerType.final,
             "answer": context.candidates.pop(0).answer,
             "options": None
         }
@@ -168,7 +165,7 @@ def question(body: dict, chat_id: str):
         context.possible_types = types
         response_body = {
             "id": chat_id,
-            "type": answer.AnswerType.clarification,  # TODO: добавить логику запросов
+            "type": answer.AnswerType.clarification,
             "answer": "Что вас интересует?",
             "options": list(types)
         }
@@ -183,7 +180,7 @@ def question(body: dict, chat_id: str):
         context.possible_requests = reqs
         response_body = {
             "id": chat_id,
-            "type": answer.AnswerType.clarification,  # TODO: добавить логику запросов
+            "type": answer.AnswerType.clarification,
             "answer": "Что Вас интересует?",
             "options": list(reqs)
         }
@@ -198,7 +195,7 @@ def question(body: dict, chat_id: str):
         context.possible_suggestions = clars
         response_body = {
             "id": chat_id,
-            "type": answer.AnswerType.clarification,  # TODO: добавить логику запросов
+            "type": answer.AnswerType.clarification,
             "answer": "Что Вас интересует?",
             "options": list(clars)
         }
@@ -212,34 +209,50 @@ def question(body: dict, chat_id: str):
     r.set(chat_id, context.json())
     response_body = {
         "id": chat_id,
-        "type": answer.AnswerType.final,  # TODO: добавить логику запросов
-        "answer": ans.answer,  # TODO: retrieve document by its id and put text here instead its index
-        # TODO: логика с уточяющими вопросами
+        "type": answer.AnswerType.final,
+        "answer": ans.answer,
     }
     return response_body
 
 
-# def clarification(context: ctx.Context):
-#
-#         #pass  # TODO: уточнить
-#
-#     print("Много типов")
-#     return context
-
 
 @router.get("/bot/v1/question/{chat_id}/incorrect", response_model=answer.Answer)
-def incorrect_answer():
-    # TODO: Достать контекст
-    # TODO: Проверить что в нужном стейте
-    # TODO: Вернуть след вопрос
-    pass
+def incorrect_answer(chat_id: str):
+    r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+    if not r.exists(chat_id):
+        raise HTTPException(status_code=404, detail="Chat context not found")
+    context = json.loads(r.get(chat_id).decode())
+    if context['state'] != ctx.State.answered:
+        raise HTTPException(status_code=400, detail="You are not in the answered state")
+
+    if len(context['candidates']) == 0 or context['candidates'] == 3:
+        res = {
+            "id": chat_id,
+            "type": answer.AnswerType.operator,
+            "answer": "Передаем запрос оператору"
+        }
+        db_controller.push_unknown(context)
+        r.delete(chat_id)
+        return res
+
+    ans = context["candidates"][0]
+    context["candidates"] = context["candidates"][1:]
+    context["attempt"] = context["attempt"] + 1
+    res = {
+        "id": chat_id,
+        "type": answer.AnswerType.final,
+        "answer": str(ans["answer"])
+    }
+    return res
 
 
 @router.get("/bot/v1/question/{chat_id}/cancel")
-def cancel_question():
-    # TODO: Проверить что контекст есть
-    # TODO: Удалить из контекста запись
-    pass
+def cancel_question(chat_id):
+    r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+    if not r.exists(chat_id):
+        raise HTTPException(status_code=404, detail="Chat context not found")
+    r.delete(chat_id)
+
 
 
 @router.get("/bot/v1/question/{chat_id}/operator", response_model=answer.Answer)
